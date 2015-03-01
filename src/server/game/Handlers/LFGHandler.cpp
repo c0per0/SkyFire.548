@@ -270,10 +270,12 @@ void WorldSession::HandleLfgTeleportOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleLfgGetLockInfoOpcode(WorldPacket& recvData)
 {
-    bool forPlayer = recvData.ReadBit();
-    TC_LOG_DEBUG("lfg", "CMSG_LFG_LOCK_INFO_REQUEST %s for %s", GetPlayerInfo().c_str(), (forPlayer ? "player" : "party"));
+    uint8 PartyIndex = recvData.ReadBit();
+    bool Player = recvData.ReadBit();
 
-    if (forPlayer)
+    TC_LOG_DEBUG("lfg", "CMSG_LFG_LOCK_INFO_REQUEST %s for %s", GetPlayerInfo().c_str(), (Player ? "player" : "party"));
+
+    if (Player)
         SendLfgPlayerLockInfo();
     else
         SendLfgPartyLockInfo();
@@ -293,8 +295,52 @@ void WorldSession::SendLfgPlayerLockInfo()
     uint32 rsize = uint32(randomDungeons.size());
     uint32 lsize = uint32(lock.size());
 
-    TC_LOG_DEBUG("lfg", "SMSG_LFG_PLAYER_INFO %s", GetPlayerInfo().c_str());
     WorldPacket data(SMSG_LFG_PLAYER_INFO, 1 + rsize * (4 + 1 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 4) + 4 + lsize * (1 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 4));
+
+    bool hasPlayerGuid = true;
+    ObjectGuid playerGuid;
+
+    data.WriteBits(0, 20);
+    data.WriteBit(0);
+    data.WriteBits(0, 17);
+
+    //unk bit16 ???
+    {
+        data.WriteBit(0);
+        data.WriteBit(0);
+        data.WriteBits(0, 21);
+        data.WriteBits(0, 19);
+        data.WriteBits(0, 20);
+
+        //for unk bit84
+        {
+            data.WriteBits(0, 21);
+            data.WriteBits(0, 20);
+            data.WriteBits(0, 21);
+        }
+        data.WriteBits(0, 21);
+    }
+
+    if (hasPlayerGuid)
+    {
+        data.WriteBit(playerGuid[5]);
+        data.WriteBit(playerGuid[1]);
+        data.WriteBit(playerGuid[2]);
+        data.WriteBit(playerGuid[7]);
+        data.WriteBit(playerGuid[3]);
+        data.WriteBit(playerGuid[0]);
+        data.WriteBit(playerGuid[6]);
+        data.WriteBit(playerGuid[4]);
+
+        data.WriteByteSeq(playerGuid[7]);
+        data.WriteByteSeq(playerGuid[2]);
+        data.WriteByteSeq(playerGuid[3]);
+        data.WriteByteSeq(playerGuid[0]);
+        data.WriteByteSeq(playerGuid[4]);
+        data.WriteByteSeq(playerGuid[5]);
+        data.WriteByteSeq(playerGuid[6]);
+        data.WriteByteSeq(playerGuid[1]);
+    }
 
     data << uint8(randomDungeons.size());                  // Random Dungeon count
     for (lfg::LfgDungeonSet::const_iterator it = randomDungeons.begin(); it != randomDungeons.end(); ++it)
@@ -314,28 +360,16 @@ void WorldSession::SendLfgPlayerLockInfo()
             }
         }
 
-        data << uint8(done);
-        data << uint32(0);                                              // currencyQuantity
-        data << uint32(0);                                              // some sort of overall cap/weekly cap
-        data << uint32(0);                                              // currencyID
-        data << uint32(0);                                              // tier1Quantity
-        data << uint32(0);                                              // tier1Limit
-        data << uint32(0);                                              // overallQuantity
-        data << uint32(0);                                              // overallLimit
-        data << uint32(0);                                              // periodPurseQuantity
-        data << uint32(0);                                              // periodPurseLimit
-        data << uint32(0);                                              // purseQuantity
-        data << uint32(0);                                              // purseLimit
-        data << uint32(0);                                              // some sort of reward for completion
-        data << uint32(0);                                              // completedEncounters
-        data << uint8(0);                                               // Call to Arms eligible
+        data << uint32(0);
 
         for (uint32 i = 0; i < 3; ++i)
         {
             data << uint32(0);                                          // Call to Arms Role
-            //if (role)
-            //    BuildQuestReward(data, ctaRoleQuest, GetPlayer());
+            data << uint32(0);
         }
+
+        data << uint32(0);
+        data << uint32(0);
 
         if (quest)
             BuildQuestReward(data, quest, GetPlayer());
@@ -343,8 +377,29 @@ void WorldSession::SendLfgPlayerLockInfo()
         {
             data << uint32(0);                                          // Money
             data << uint32(0);                                          // XP
-            data << uint8(0);                                           // Reward count
+            data << uint32(0);                                          // Reward count
         }
+
+        data << uint32(0);                                              // currencyQuantity
+        data << uint32(0);                                              // some sort of overall cap/weekly cap
+        data << uint32(0);                                              // currencyID
+        data << uint32(0);                                              // tier1Quantity
+        data << uint32(0);                                              // tier1Limit
+        data << uint32(0);                                              // overallQuantity
+
+        for (uint32 i = 0; i < 3; ++i)
+        {
+            data << uint32(0);
+            data << uint32(0);
+        }
+
+        data << uint32(0);                                              // overallLimit
+        data << uint32(0);                                              // periodPurseQuantity
+        data << uint32(0);                                              // periodPurseLimit
+        data << uint32(0);                                              // purseQuantity
+        data << uint32(0);                                              // purseLimit
+        data << uint32(0);                                              // some sort of reward for completion
+        data << uint32(0);                                              // completedEncounters
     }
 
     BuildPlayerLockDungeonBlock(data, lock);
