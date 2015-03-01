@@ -201,7 +201,7 @@ TC_LOG_DEBUG("network", "WORLD: Received CMSG_VOID_STORAGE_TRANSFER");
     npcGuid[7] = recvData.ReadBit();
     npcGuid[4] = recvData.ReadBit();
 
-    uint32 countWithdraw = recvData.ReadBits(26);
+    uint32 countWithdraw = recvData.ReadBits(24);
 
     if (countWithdraw > 9)
     {
@@ -212,17 +212,17 @@ TC_LOG_DEBUG("network", "WORLD: Received CMSG_VOID_STORAGE_TRANSFER");
     std::vector<ObjectGuid> itemIds(countWithdraw);
     for (uint32 i = 0; i < countWithdraw; ++i)
     {
-        itemIds[i][4] = recvData.ReadBit();
         itemIds[i][0] = recvData.ReadBit();
-        itemIds[i][5] = recvData.ReadBit();
-        itemIds[i][7] = recvData.ReadBit();
-        itemIds[i][6] = recvData.ReadBit();
-        itemIds[i][1] = recvData.ReadBit();
-        itemIds[i][2] = recvData.ReadBit();
         itemIds[i][3] = recvData.ReadBit();
+        itemIds[i][6] = recvData.ReadBit();
+        itemIds[i][5] = recvData.ReadBit();
+        itemIds[i][4] = recvData.ReadBit();
+        itemIds[i][2] = recvData.ReadBit();
+        itemIds[i][1] = recvData.ReadBit();
+        itemIds[i][7] = recvData.ReadBit();
     }
 
-    uint32 countDeposit = recvData.ReadBits(26); //40
+    uint32 countDeposit = recvData.ReadBits(24);
 
     if (countDeposit > 9)
     {
@@ -233,14 +233,14 @@ TC_LOG_DEBUG("network", "WORLD: Received CMSG_VOID_STORAGE_TRANSFER");
     std::vector<ObjectGuid> itemGuids(countDeposit);
     for (uint32 i = 0; i < countDeposit; ++i)
     {
-        itemGuids[i][0] = recvData.ReadBit();
-        itemGuids[i][3] = recvData.ReadBit();
-        itemGuids[i][6] = recvData.ReadBit();
-        itemGuids[i][5] = recvData.ReadBit();
         itemGuids[i][4] = recvData.ReadBit();
-        itemGuids[i][2] = recvData.ReadBit();
-        itemGuids[i][1] = recvData.ReadBit();
+        itemGuids[i][0] = recvData.ReadBit();
+        itemGuids[i][5] = recvData.ReadBit();
         itemGuids[i][7] = recvData.ReadBit();
+        itemGuids[i][6] = recvData.ReadBit();
+        itemGuids[i][1] = recvData.ReadBit();
+        itemGuids[i][2] = recvData.ReadBit();
+        itemGuids[i][3] = recvData.ReadBit();
     }
 
     npcGuid[6] = recvData.ReadBit();
@@ -384,91 +384,90 @@ TC_LOG_DEBUG("network", "WORLD: Received CMSG_VOID_STORAGE_TRANSFER");
 
     WorldPacket data(SMSG_VOID_STORAGE_TRANSFER_CHANGES, ((5 + 5 + (7 + 7) * depositCount +
         7 * withdrawCount) / 8) + 7 * withdrawCount + (7 + 7 + 4 * 4) * depositCount);
-
-    data.WriteBits(depositCount, 5);
+    
     data.WriteBits(withdrawCount, 5);
+
+    for (uint8 i = 0; i < withdrawCount; ++i)
+    {
+        ObjectGuid itemId = withdrawItems[i].ItemId;
+
+        data.WriteBit(itemId[1]);
+        data.WriteBit(itemId[6]);
+        data.WriteBit(itemId[7]);
+        data.WriteBit(itemId[3]);
+        data.WriteBit(itemId[2]);
+        data.WriteBit(itemId[0]);
+        data.WriteBit(itemId[4]);
+        data.WriteBit(itemId[5]);
+    }
+
+    data.WriteBits(depositCount, 4);
 
     for (uint8 i = 0; i < depositCount; ++i)
     {
         ObjectGuid itemId = depositItems[i].first.ItemId;
         ObjectGuid creatorGuid = depositItems[i].first.CreatorGuid;
-        data.WriteBit(creatorGuid[7]);
-        data.WriteBit(itemId[7]);
-        data.WriteBit(itemId[4]);
-        data.WriteBit(creatorGuid[6]);
-        data.WriteBit(creatorGuid[5]);
-        data.WriteBit(itemId[3]);
-        data.WriteBit(itemId[5]);
-        data.WriteBit(creatorGuid[4]);
-        data.WriteBit(creatorGuid[2]);
-        data.WriteBit(creatorGuid[0]);
-        data.WriteBit(creatorGuid[3]);
-        data.WriteBit(creatorGuid[1]);
-        data.WriteBit(itemId[2]);
-        data.WriteBit(itemId[0]);
-        data.WriteBit(itemId[1]);
-        data.WriteBit(itemId[6]);
-    }
 
-    for (uint8 i = 0; i < withdrawCount; ++i)
-    {
-        ObjectGuid itemId = withdrawItems[i].ItemId;
-        data.WriteBit(itemId[1]);
-        data.WriteBit(itemId[7]);
-        data.WriteBit(itemId[3]);
-        data.WriteBit(itemId[5]);
-        data.WriteBit(itemId[6]);
-        data.WriteBit(itemId[2]);
-        data.WriteBit(itemId[4]);
         data.WriteBit(itemId[0]);
+        data.WriteBit(creatorGuid[6]);
+        data.WriteBit(creatorGuid[4]);
+        data.WriteBit(itemId[3]);
+        data.WriteBit(creatorGuid[3]);
+        data.WriteBit(itemId[5]);
+        data.WriteBit(itemId[7]);
+        data.WriteBit(creatorGuid[0]);
+        data.WriteBit(creatorGuid[5]);
+        data.WriteBit(creatorGuid[7]);
+        data.WriteBit(itemId[6]);
+        data.WriteBit(itemId[4]);
+        data.WriteBit(creatorGuid[1]);
+        data.WriteBit(itemId[1]);
+        data.WriteBit(creatorGuid[2]);
+        data.WriteBit(itemId[2]);
     }
 
     data.FlushBits();
 
-    for (uint8 i = 0; i < withdrawCount; ++i)
-    {
-        ObjectGuid itemId = withdrawItems[i].ItemId;
-        data.WriteByteSeq(itemId[3]);
-        data.WriteByteSeq(itemId[1]);
-        data.WriteByteSeq(itemId[0]);
-        data.WriteByteSeq(itemId[2]);
-        data.WriteByteSeq(itemId[7]);
-        data.WriteByteSeq(itemId[5]);
-        data.WriteByteSeq(itemId[6]);
-        data.WriteByteSeq(itemId[4]);
-    }
-
     for (uint8 i = 0; i < depositCount; ++i)
     {
         ObjectGuid itemId = depositItems[i].first.ItemId;
         ObjectGuid creatorGuid = depositItems[i].first.CreatorGuid;
 
-        data << uint32(depositItems[i].first.ItemSuffixFactor);
-
-        data.WriteByteSeq(itemId[6]);
-        data.WriteByteSeq(itemId[4]);
-        data.WriteByteSeq(creatorGuid[4]);
-        data.WriteByteSeq(itemId[2]);
-        data.WriteByteSeq(creatorGuid[1]);
-        data.WriteByteSeq(creatorGuid[3]);
-        data.WriteByteSeq(itemId[3]);
-        data.WriteByteSeq(creatorGuid[0]);
-        data.WriteByteSeq(itemId[0]);
-        data.WriteByteSeq(creatorGuid[6]);
-        data.WriteByteSeq(itemId[5]);
-        data.WriteByteSeq(creatorGuid[5]);
-        data.WriteByteSeq(creatorGuid[7]);
-
-        data << uint32(depositItems[i].first.ItemEntry);
-
-        data.WriteByteSeq(itemId[1]);
-
         data << uint32(depositItems[i].second); // slot
-
+        data.WriteByteSeq(creatorGuid[5]);
+        data << uint32(depositItems[i].first.ItemEntry);
+        data.WriteByteSeq(creatorGuid[6]);
+        data.WriteByteSeq(creatorGuid[3]);
+        data << uint32(depositItems[i].first.ItemSuffixFactor);
         data.WriteByteSeq(creatorGuid[2]);
-        data.WriteByteSeq(itemId[7]);
-
+        data.WriteByteSeq(itemId[5]);
         data << uint32(depositItems[i].first.ItemRandomPropertyId);
+        data.WriteByteSeq(itemId[3]);
+        data.WriteByteSeq(creatorGuid[7]);
+        data.WriteByteSeq(creatorGuid[4]);
+        data.WriteByteSeq(creatorGuid[1]);
+        data.WriteByteSeq(itemId[0]);
+        data.WriteByteSeq(itemId[4]);
+        data.WriteByteSeq(itemId[6]);
+        data << uint32(0);            // unk
+        data.WriteByteSeq(itemId[1]);
+        data.WriteByteSeq(itemId[2]);
+        data.WriteByteSeq(creatorGuid[0]);
+        data.WriteByteSeq(itemId[7]);
+    }
+
+    for (uint8 i = 0; i < withdrawCount; ++i)
+    {
+        ObjectGuid itemId = withdrawItems[i].ItemId;
+
+        data.WriteByteSeq(itemId[7]);
+        data.WriteByteSeq(itemId[3]);
+        data.WriteByteSeq(itemId[1]);
+        data.WriteByteSeq(itemId[5]);
+        data.WriteByteSeq(itemId[4]);
+        data.WriteByteSeq(itemId[0]);
+        data.WriteByteSeq(itemId[6]);
+        data.WriteByteSeq(itemId[2]);
     }
 
     SendPacket(&data);
